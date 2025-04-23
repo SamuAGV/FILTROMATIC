@@ -1,0 +1,725 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+
+// Servicio API (podrías mover esto a un archivo aparte api.js)
+const API_BASE_URL = "http://localhost:3001/api" // Reemplaza con tu URL real
+
+const fetchMetrics = async () => {
+  try {
+    const token = localStorage.getItem("token")
+    const response = await fetch(`${API_BASE_URL}/metricas`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+    if (!response.ok) throw new Error("Error al obtener métricas")
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching metrics:", error)
+    throw error
+  }
+}
+
+const fetchRecentRecords = async () => {
+  try {
+    const token = localStorage.getItem("token")
+    const response = await fetch(`${API_BASE_URL}/ultimos-registros`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+    if (!response.ok) throw new Error("Error al obtener registros recientes")
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching recent records:", error)
+    throw error
+  }
+}
+
+const DashboardFiltromatic = () => {
+  const navigate = useNavigate()
+  const [nombreUsuario, setNombreUsuario] = useState("Operador")
+  const [metrics, setMetrics] = useState(null)
+  const [recentActivities, setRecentActivities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [metricsData, activitiesData] = await Promise.all([fetchMetrics(), fetchRecentRecords()])
+
+        setMetrics(metricsData)
+        setRecentActivities(activitiesData)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const handleCerrarSesion = () => {
+    localStorage.removeItem("token")
+    navigate("/login")
+  }
+
+  if (loading)
+    return (
+      <div style={styles.loadingContainer}>
+        <div style={styles.loadingSpinner}></div>
+        <p style={styles.loadingText}>Cargando datos del sistema...</p>
+      </div>
+    )
+
+  if (error)
+    return (
+      <div style={styles.errorContainer}>
+        <div style={styles.errorIcon}>!</div>
+        <h2 style={styles.errorTitle}>Error de conexión</h2>
+        <p style={styles.errorMessage}>{error}</p>
+        <button onClick={() => window.location.reload()} style={styles.errorButton}>
+          Reintentar
+        </button>
+      </div>
+    )
+
+  return (
+    <div style={styles.container}>
+      <aside style={styles.sidebar}>
+        <div style={styles.logoContainer}>
+          <h2 style={styles.logo}>FILTROMATIC</h2>
+        </div>
+        <nav style={styles.navigation}>
+          <ul style={styles.navList}>
+            <li style={{ ...styles.navItem, ...styles.navItemActive }}>
+              <span style={styles.navIcon}>📊</span>
+              <span>Dashboard</span>
+            </li>
+            <li style={styles.navItem}>
+              <span style={styles.navIcon}>📈</span>
+              <span>Estadísticas</span>
+            </li>
+            <li style={styles.navItem}>
+              <span style={styles.navIcon}>⚙️</span>
+              <span>Configuración</span>
+            </li>
+            <li style={styles.navItem}>
+              <span style={styles.navIcon}>📋</span>
+              <span>Reportes</span>
+            </li>
+          </ul>
+        </nav>
+        <div style={styles.sidebarFooter}>
+          <div style={styles.userProfile}>
+            <div style={styles.userAvatar}>{nombreUsuario.charAt(0)}</div>
+            <div style={styles.userDetails}>
+              <p style={styles.userName}>{nombreUsuario}</p>
+              <p style={styles.userRole}>Administrador</p>
+            </div>
+          </div>
+          <button onClick={handleCerrarSesion} style={styles.logoutButton}>
+            Cerrar Sesión
+          </button>
+        </div>
+      </aside>
+
+      <main style={styles.mainContent}>
+        <header style={styles.header}>
+          <h1 style={styles.pageTitle}>Panel de Control</h1>
+          <div style={styles.headerActions}>
+            <div style={styles.dateDisplay}>
+              {new Date().toLocaleDateString("es-ES", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </div>
+            <div style={styles.notificationBell}>
+              🔔<span style={styles.notificationBadge}>3</span>
+            </div>
+          </div>
+        </header>
+
+        <div style={styles.dashboardContent}>
+          <section style={styles.metricsSection}>
+            <h2 style={styles.sectionTitle}>Métricas del Sistema</h2>
+            <div style={styles.metricsGrid}>
+              <MetricaCard
+                titulo="Total Sensores"
+                valor={metrics?.totalSensores}
+                unidad="sensores"
+                icon="🔌"
+                color="#4361ee"
+              />
+              <MetricaCard
+                titulo="Total Registros"
+                valor={metrics?.totalRegistros}
+                unidad="registros"
+                icon="📊"
+                color="#3a0ca3"
+              />
+              <MetricaCard
+                titulo="Bandas Activas"
+                valor={metrics?.bandasActivas}
+                unidad={`de ${metrics?.totalBandas}`}
+                icon="⚙️"
+                color="#7209b7"
+              />
+              <MetricaCard
+                titulo="Controladores"
+                valor={metrics?.controladoresActivos}
+                unidad="activos"
+                icon="🎛️"
+                color="#f72585"
+              />
+            </div>
+          </section>
+
+          <div style={styles.twoColumnLayout}>
+            <section style={styles.statusSection}>
+              <h2 style={styles.sectionTitle}>Estado del Sistema</h2>
+              <div style={styles.statusGrid}>
+                <StatusCard
+                  titulo="Sensor de Color"
+                  estado={metrics?.bandasActivas > 0 ? "Operativo" : "Inactivo"}
+                  estadoOk={metrics?.bandasActivas > 0}
+                  icon="🔍"
+                />
+                <StatusCard
+                  titulo="Banda Transportadora"
+                  estado={metrics?.bandasActivas > 0 ? "Activa" : "Inactiva"}
+                  estadoOk={metrics?.bandasActivas > 0}
+                  icon="➡️"
+                />
+                <StatusCard
+                  titulo="Mecanismo de Separación"
+                  estado={metrics?.controladoresActivos > 0 ? "Funcionando" : "Detenido"}
+                  estadoOk={metrics?.controladoresActivos > 0}
+                  icon="🔄"
+                />
+              </div>
+            </section>
+
+            <section style={styles.activitySection}>
+              <div style={styles.activityHeader}>
+                <h2 style={styles.sectionTitle}>Actividad Reciente</h2>
+                <button style={styles.viewAllButton}>Ver todo</button>
+              </div>
+              <div style={styles.activityList}>
+                {recentActivities.length > 0 ? (
+                  recentActivities.map((activity, index) => (
+                    <ActivityItem
+                      key={index}
+                      texto={`Registro de objeto (ID: ${activity.id})`}
+                      tiempo={`${formatDate(activity.fecha)} ${activity.hora}`}
+                      icon="📦"
+                    />
+                  ))
+                ) : (
+                  <div style={styles.noActivities}>
+                    <p style={styles.noActivitiesText}>No hay actividades recientes</p>
+                    <button style={styles.refreshButton}>Actualizar</button>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+const MetricaCard = ({ titulo, valor, unidad, icon, color }) => (
+  <div style={styles.metricaCard}>
+    <div style={{ ...styles.metricaIcon, backgroundColor: color }}>{icon}</div>
+    <div style={styles.metricaContent}>
+      <h3 style={styles.metricaTitle}>{titulo}</h3>
+      <p style={styles.metricaValor}>
+        {valor || "--"} <span style={styles.metricaUnidad}>{unidad}</span>
+      </p>
+    </div>
+  </div>
+)
+
+const StatusCard = ({ titulo, estado, estadoOk, icon }) => (
+  <div style={styles.statusCard}>
+    <div style={styles.statusHeader}>
+      <div style={styles.statusIcon}>{icon}</div>
+      <h3 style={styles.statusTitle}>{titulo}</h3>
+    </div>
+    <div style={styles.statusContent}>
+      <div
+        style={{
+          ...styles.statusIndicator,
+          backgroundColor: estadoOk ? "#10b981" : "#ef4444",
+        }}
+      ></div>
+      <p
+        style={{
+          ...styles.statusValor,
+          color: estadoOk ? "#10b981" : "#ef4444",
+        }}
+      >
+        {estado}
+      </p>
+    </div>
+  </div>
+)
+
+const ActivityItem = ({ texto, tiempo, icon }) => (
+  <div style={styles.activityItem}>
+    <div style={styles.activityIcon}>{icon}</div>
+    <div style={styles.activityContent}>
+      <p style={styles.activityText}>{texto}</p>
+      <span style={styles.activityTime}>{tiempo}</span>
+    </div>
+  </div>
+)
+
+// Función para formatear la fecha
+const formatDate = (dateString) => {
+  if (!dateString) return ""
+  const date = new Date(dateString)
+  return date.toLocaleDateString("es-ES")
+}
+
+const styles = {
+  container: {
+    fontFamily: "'Segoe UI', 'Roboto', sans-serif",
+    display: "flex",
+    minHeight: "100vh",
+    backgroundColor: "#f9fafb",
+    margin: 0,
+    padding: 0,
+  },
+  sidebar: {
+    width: "260px",
+    backgroundColor: "#1e293b",
+    color: "#f8fafc",
+    display: "flex",
+    flexDirection: "column",
+    position: "fixed",
+    height: "100vh",
+    boxShadow: "2px 0 10px rgba(0,0,0,0.1)",
+  },
+  logoContainer: {
+    padding: "24px 20px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+  },
+  logo: {
+    margin: 0,
+    fontSize: "22px",
+    fontWeight: "700",
+    letterSpacing: "1px",
+  },
+  navigation: {
+    flex: 1,
+    padding: "20px 0",
+  },
+  navList: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+  },
+  navItem: {
+    padding: "12px 20px",
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+    borderRadius: "0 20px 20px 0",
+    marginBottom: "4px",
+    marginRight: "10px",
+    fontSize: "14px",
+    ":hover": {
+      backgroundColor: "rgba(255,255,255,0.1)",
+    },
+  },
+  navItemActive: {
+    backgroundColor: "#3b82f6",
+    color: "white",
+    fontWeight: "500",
+  },
+  navIcon: {
+    marginRight: "12px",
+    fontSize: "18px",
+  },
+  sidebarFooter: {
+    padding: "20px",
+    borderTop: "1px solid rgba(255,255,255,0.1)",
+  },
+  userProfile: {
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "15px",
+  },
+  userAvatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    backgroundColor: "#3b82f6",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: "12px",
+    fontWeight: "bold",
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    margin: "0 0 2px 0",
+    fontWeight: "500",
+    fontSize: "14px",
+  },
+  userRole: {
+    margin: 0,
+    fontSize: "12px",
+    color: "#94a3b8",
+  },
+  logoutButton: {
+    width: "100%",
+    padding: "10px",
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    color: "#ef4444",
+    border: "1px solid #ef4444",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    fontWeight: "500",
+    fontSize: "14px",
+    ":hover": {
+      backgroundColor: "rgba(239, 68, 68, 0.3)",
+    },
+  },
+  mainContent: {
+    flex: 1,
+    marginLeft: "260px",
+    padding: "0",
+    width: "calc(100% - 260px)",
+  },
+  header: {
+    padding: "20px 30px",
+    backgroundColor: "white",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
+  },
+  pageTitle: {
+    margin: 0,
+    fontSize: "24px",
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+  },
+  dateDisplay: {
+    marginRight: "20px",
+    color: "#64748b",
+    fontSize: "14px",
+  },
+  notificationBell: {
+    fontSize: "20px",
+    position: "relative",
+    cursor: "pointer",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: "-5px",
+    right: "-5px",
+    backgroundColor: "#ef4444",
+    color: "white",
+    borderRadius: "50%",
+    width: "16px",
+    height: "16px",
+    fontSize: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dashboardContent: {
+    padding: "30px",
+  },
+  metricsSection: {
+    marginBottom: "30px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    marginBottom: "20px",
+    color: "#1e293b",
+    display: "flex",
+    alignItems: "center",
+  },
+  metricsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: "20px",
+  },
+  metricaCard: {
+    backgroundColor: "white",
+    borderRadius: "10px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+    padding: "20px",
+    display: "flex",
+    alignItems: "center",
+    transition: "transform 0.2s, box-shadow 0.2s",
+    ":hover": {
+      transform: "translateY(-5px)",
+      boxShadow: "0 8px 15px rgba(0,0,0,0.1)",
+    },
+  },
+  metricaIcon: {
+    width: "50px",
+    height: "50px",
+    borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: "15px",
+    fontSize: "24px",
+    color: "white",
+  },
+  metricaContent: {
+    flex: 1,
+  },
+  metricaTitle: {
+    margin: "0 0 5px 0",
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  metricaValor: {
+    fontSize: "24px",
+    fontWeight: "700",
+    margin: 0,
+    color: "#1e293b",
+  },
+  metricaUnidad: {
+    fontSize: "14px",
+    color: "#94a3b8",
+    fontWeight: "normal",
+  },
+  twoColumnLayout: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "30px",
+    "@media (max-width: 1024px)": {
+      gridTemplateColumns: "1fr",
+    },
+  },
+  statusSection: {
+    backgroundColor: "white",
+    borderRadius: "10px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+    padding: "20px",
+  },
+  statusGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+  },
+  statusCard: {
+    padding: "15px",
+    borderRadius: "8px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+  },
+  statusHeader: {
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "10px",
+  },
+  statusIcon: {
+    marginRight: "10px",
+    fontSize: "18px",
+  },
+  statusTitle: {
+    margin: 0,
+    fontSize: "15px",
+    fontWeight: "500",
+    color: "#334155",
+  },
+  statusContent: {
+    display: "flex",
+    alignItems: "center",
+  },
+  statusIndicator: {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    marginRight: "8px",
+  },
+  statusValor: {
+    fontSize: "14px",
+    fontWeight: "600",
+    margin: 0,
+  },
+  activitySection: {
+    backgroundColor: "white",
+    borderRadius: "10px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+    padding: "20px",
+  },
+  activityHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+  viewAllButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#3b82f6",
+    fontSize: "14px",
+    cursor: "pointer",
+    fontWeight: "500",
+  },
+  activityList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    maxHeight: "300px",
+    overflowY: "auto",
+  },
+  activityItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+    transition: "background-color 0.2s",
+    ":hover": {
+      backgroundColor: "#f1f5f9",
+    },
+  },
+  activityIcon: {
+    marginRight: "12px",
+    fontSize: "18px",
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    margin: "0 0 4px 0",
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#334155",
+  },
+  activityTime: {
+    fontSize: "12px",
+    color: "#94a3b8",
+  },
+  noActivities: {
+    textAlign: "center",
+    padding: "30px 0",
+  },
+  noActivitiesText: {
+    color: "#94a3b8",
+    fontStyle: "italic",
+    marginBottom: "15px",
+  },
+  refreshButton: {
+    backgroundColor: "#e2e8f0",
+    border: "none",
+    borderRadius: "6px",
+    padding: "8px 15px",
+    fontSize: "13px",
+    cursor: "pointer",
+    color: "#475569",
+    fontWeight: "500",
+    transition: "background-color 0.2s",
+    ":hover": {
+      backgroundColor: "#cbd5e1",
+    },
+  },
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    backgroundColor: "#f9fafb",
+  },
+  loadingSpinner: {
+    width: "40px",
+    height: "40px",
+    border: "4px solid #e2e8f0",
+    borderRadius: "50%",
+    borderTop: "4px solid #3b82f6",
+    animation: "spin 1s linear infinite",
+  },
+  loadingText: {
+    marginTop: "20px",
+    color: "#64748b",
+    fontSize: "16px",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    backgroundColor: "#f9fafb",
+    padding: "0 20px",
+    textAlign: "center",
+  },
+  errorIcon: {
+    width: "60px",
+    height: "60px",
+    borderRadius: "50%",
+    backgroundColor: "#fee2e2",
+    color: "#ef4444",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "30px",
+    fontWeight: "bold",
+    marginBottom: "20px",
+  },
+  errorTitle: {
+    color: "#1e293b",
+    marginBottom: "10px",
+    fontSize: "22px",
+  },
+  errorMessage: {
+    color: "#64748b",
+    marginBottom: "25px",
+    fontSize: "16px",
+  },
+  errorButton: {
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    padding: "10px 20px",
+    fontSize: "14px",
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+    ":hover": {
+      backgroundColor: "#2563eb",
+    },
+  },
+  "@keyframes spin": {
+    "0%": { transform: "rotate(0deg)" },
+    "100%": { transform: "rotate(360deg)" },
+  },
+}
+
+export default DashboardFiltromatic
+

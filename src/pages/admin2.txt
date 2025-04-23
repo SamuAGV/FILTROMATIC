@@ -1,0 +1,563 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+
+import {
+  Filter,
+  User,
+  ListChecks,
+  Database,
+  LogOut,
+  Power,
+  AlertTriangle,
+  Users,
+  Activity,
+  Settings,
+  BarChart,
+  Link,
+} from "lucide-react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import Logo from "../assets/LogoFM.jpeg"
+
+
+const AdminDashboard = () => {
+  const navigate = useNavigate()
+  const [nombreAdministrador, setNombreAdministrador] = useState("")
+  const [systemSummary, setSystemSummary] = useState({
+    totalSensores: 0,
+    totalFiltros: 0,
+    totalRegistros: 0,
+  })
+  const [isSystemOn, setIsSystemOn] = useState(false)
+  const [sensorData, setSensorData] = useState([])
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      navigate("/login")
+    } else {
+      fetch("http://localhost:3001/api/registros")
+        .then((response) => response.json())
+        .then((data) => {
+          const administrador = data.find((user) => user.id_rol === 1)
+          if (administrador) {
+            setNombreAdministrador(administrador.nombre)
+          } else {
+            setNombreAdministrador("Administrador")
+          }
+        })
+        .catch((error) => {
+          console.error("Error al obtener los datos del administrador:", error)
+          setNombreAdministrador("Administrador")
+        })
+
+      fetchSystemSummary()
+      fetchSensorData()
+    }
+  }, [navigate])
+
+  const fetchSystemSummary = async () => {
+    setTimeout(() => {
+      setSystemSummary({
+        totalSensores: 10,
+        totalFiltros: 25,
+        totalRegistros: 100,
+      })
+    }, 1000)
+  }
+
+  const fetchSensorData = async () => {
+    // Simulación de datos de sensores
+    const data = [
+      { time: "10:00", value: 200 },
+      { time: "10:05", value: 120 },
+      { time: "10:10", value: 205 },
+      { time: "10:15", value: 220 },
+      { time: "10:20", value: 23 },
+      { time: "10:25", value: 225 },
+    ]
+    setSensorData(data)
+  }
+
+  {/* const fetchSensorData = async () => {
+  try {
+    const response = await fetch("http://localhost:3001/api/registros");
+    const data = await response.json();
+
+    // Convertir los datos obtenidos en el formato adecuado para la gráfica
+    const formattedData = data.map((item) => ({
+      time: new Date(item.created_at).toLocaleDateString(), // Convierte la fecha
+      value: item.id || 0, // Usamos el ID como valor, ajústalo según lo que necesites
+    }));
+
+    setSensorData(formattedData);
+  } catch (error) {
+    console.error("Error al obtener los datos de los registros:", error);
+  }
+};
+*/}
+
+  const handleCerrarSesion = () => {
+    localStorage.removeItem("token")
+    navigate("/login")
+  }
+
+  const handleSystemToggle = () => {
+    setIsSystemOn(!isSystemOn)
+    // Aquí puedes agregar la lógica para encender/apagar el sistema
+  }
+
+  const handleEmergency = () => {
+    // Aquí puedes agregar la lógica para manejar la emergencia
+    alert("¡Emergencia activada!")
+  }
+
+  const crudItems = [
+    { name: "Clientes", icon: User, description: "Gestionar a los clientes", route: "/clientes" },
+    { name: "Roles", icon: ListChecks, description: "Administrar tipos de roles", route: "/roles" },
+    { name: "Usuarios", icon: Users, description: "Gestión de usuarios", route: "/usuarios" },
+    { name: "Registros", icon: Database, description: "Historial de datos registrados", route: "/registros" },
+    { name: "Banda", icon: Activity, description: "Control de la banda transportadora", route: "/banda" },
+    { name: "Controles", icon: Settings, description: "Configuración de controles", route: "/controles" },
+    { name: "Sensores", icon: BarChart, description: "Datos de sensores", route: "/sensores" },
+    { name: "Relaciones", icon: Link, description: "Relaciones entre elementos", route: "/relaciones" },
+  ]
+
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <div style={styles.headerLeft}>
+          <img src={Logo || "/placeholder.svg"} alt="Logo" style={styles.logo} />
+          <h1 style={styles.headerTitle}>Filtromatic</h1>
+        </div>
+        <div style={styles.userInfo}>
+          <div style={styles.userDetails}>
+            <span style={styles.welcomeText}>Bienvenido</span>
+            <span style={styles.userName}>{nombreAdministrador}</span>
+          </div>
+          <button onClick={handleCerrarSesion} style={styles.logoutButton}>
+            <LogOut size={18} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </header>
+
+      <div style={styles.dashboardContainer}>
+        <div style={styles.sidebar}>
+          <div style={styles.sidebarHeader}>
+            <h2 style={styles.sidebarTitle}>Panel de Control</h2>
+          </div>
+          <div style={styles.sidebarMenu}>
+            {crudItems.map((item) => (
+              <div key={item.name} style={styles.sidebarItem} onClick={() => navigate(item.route)}>
+                <item.icon size={20} style={styles.sidebarIcon} />
+                <span style={styles.sidebarText}>{item.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <main style={styles.mainContent}>
+          <div style={styles.pageHeader}>
+            <h1 style={styles.pageTitle}>Panel de Control</h1>
+            <div style={styles.controlButtons}>
+              <button onClick={handleSystemToggle} style={isSystemOn ? styles.onButton : styles.offButton}>
+                <Power size={18} />
+                <span>{isSystemOn ? "Apagar Sistema" : "Encender Sistema"}</span>
+              </button>
+              <button onClick={handleEmergency} style={styles.emergencyButton}>
+                <AlertTriangle size={18} />
+                <span>Emergencia</span>
+              </button>
+            </div>
+          </div>
+
+          <section style={styles.metricsSection}>
+            <h2 style={styles.sectionTitle}>Métricas del Sistema</h2>
+            <div style={styles.metricsGrid}>
+              <MetricaCard
+                titulo="Sensores Activos"
+                valor={systemSummary.totalSensores}
+                cambio="+10%"
+                icon={<BarChart size={24} style={styles.metricIcon} />}
+                color="#4361ee"
+              />
+              <MetricaCard
+                titulo="Filtros Configurados"
+                valor={systemSummary.totalFiltros}
+                cambio="+5%"
+                icon={<Filter size={24} style={styles.metricIcon} />}
+                color="#3a0ca3"
+              />
+              <MetricaCard
+                titulo="Registros Totales"
+                valor={systemSummary.totalRegistros}
+                cambio="+20%"
+                icon={<Database size={24} style={styles.metricIcon} />}
+                color="#7209b7"
+              />
+            </div>
+          </section>
+
+          <section style={styles.chartSection}>
+            <h2 style={styles.sectionTitle}>Datos de Sensores en Tiempo Real</h2>
+            <div style={styles.chartContainer}>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={sensorData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="time" stroke="#718096" />
+                  <YAxis stroke="#718096" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="value" stroke="#4361ee" strokeWidth={2} activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section style={styles.crudSection}>
+            <h2 style={styles.sectionTitle}>Gestión de Filtromatic</h2>
+            <div style={styles.crudGrid}>
+              {crudItems.map((item) => (
+                <CrudCard key={item.name} item={item} navigate={navigate} />
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  )
+}
+
+const MetricaCard = ({ titulo, valor, cambio, icon, color }) => (
+  <div style={styles.metricaCard}>
+    <div style={styles.metricaHeader}>
+      <div style={{ ...styles.metricaIconContainer, backgroundColor: `${color}20` }}>{icon}</div>
+      <div style={styles.metricaChange}>
+        <span style={styles.metricaCambio}>{cambio}</span>
+      </div>
+    </div>
+    <h3 style={styles.metricaTitulo}>{titulo}</h3>
+    <p style={styles.metricaValor}>{valor}</p>
+  </div>
+)
+
+const CrudCard = ({ item, navigate }) => (
+  <div style={styles.crudCard} onClick={() => navigate(item.route)}>
+    <div style={styles.crudIconContainer}>
+      <item.icon size={24} style={styles.crudIcon} />
+    </div>
+    <div style={styles.crudContent}>
+      <h3 style={styles.crudCardTitle}>{item.name}</h3>
+      <p style={styles.crudCardDescription}>{item.description}</p>
+    </div>
+  </div>
+)
+
+const styles = {
+  container: {
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    backgroundColor: "#f7fafc",
+    minHeight: "100vh",
+    color: "#2d3748",
+  },
+  header: {
+    backgroundColor: "#ffffff",
+    padding: "0 24px",
+    height: "70px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+  },
+  logo: {
+    height: "65px",
+    width: "65px",
+    borderRadius: "50%",
+    objectFit: "cover",
+    border: "2px solid #e2e8f0",
+    
+  },
+  headerTitle: {
+    fontSize: "22px",
+    fontWeight: "600",
+    margin: "0 0 0 12px",
+    color: "#2d3748",
+  },
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  userDetails: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+  },
+  welcomeText: {
+    fontSize: "12px",
+    color: "#718096",
+  },
+  userName: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#2d3748",
+  },
+  logoutButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "8px 16px",
+    backgroundColor: "#f56565",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    fontSize: "14px",
+  },
+  dashboardContainer: {
+    display: "flex",
+    height: "calc(100vh - 70px)",
+  },
+  sidebar: {
+    width: "240px",
+    backgroundColor: "#2d3748",
+    color: "#e2e8f0",
+    height: "100%",
+    boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
+  },
+  sidebarHeader: {
+    padding: "20px 16px",
+    borderBottom: "1px solid #4a5568",
+  },
+  sidebarTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    margin: 0,
+    color: "#e2e8f0",
+  },
+  sidebarMenu: {
+    padding: "16px 0",
+  },
+  sidebarItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 16px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    borderLeft: "3px solid transparent",
+  },
+  sidebarIcon: {
+    color: "#a0aec0",
+    marginRight: "12px",
+  },
+  sidebarText: {
+    fontSize: "14px",
+    color: "#e2e8f0",
+  },
+  mainContent: {
+    flex: 1,
+    padding: "24px",
+    overflowY: "auto",
+  },
+  pageHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px",
+  },
+  pageTitle: {
+    fontSize: "24px",
+    fontWeight: "700",
+    margin: 0,
+    color: "#1a202c",
+  },
+  controlButtons: {
+    display: "flex",
+    gap: "12px",
+  },
+  onButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#38a169",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    fontSize: "14px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  offButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#e53e3e",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    fontSize: "14px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  emergencyButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#ecc94b",
+    color: "#744210",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "600",
+    fontSize: "14px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    marginBottom: "16px",
+    color: "#2d3748",
+    paddingBottom: "8px",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  metricsSection: {
+    marginBottom: "24px",
+  },
+  metricsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "20px",
+  },
+  metricaCard: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+  },
+  metricaHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
+  },
+  metricaIconContainer: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricIcon: {
+    color: "#4361ee",
+  },
+  metricaChange: {
+    backgroundColor: "#f0fff4",
+    padding: "4px 8px",
+    borderRadius: "16px",
+  },
+  metricaTitulo: {
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#718096",
+    margin: "0 0 8px 0",
+  },
+  metricaValor: {
+    fontSize: "28px",
+    fontWeight: "700",
+    margin: "0",
+    color: "#2d3748",
+  },
+  metricaCambio: {
+    fontSize: "12px",
+    color: "#38a169",
+    fontWeight: "600",
+  },
+  chartSection: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    marginBottom: "24px",
+  },
+  chartContainer: {
+    marginTop: "16px",
+  },
+  crudSection: {
+    marginBottom: "24px",
+  },
+  crudGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: "20px",
+  },
+  crudCard: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+  },
+  crudIconContainer: {
+    width: "48px",
+    height: "48px",
+    borderRadius: "8px",
+    backgroundColor: "#ebf4ff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: "16px",
+    flexShrink: 0,
+  },
+  crudIcon: {
+    color: "#4361ee",
+  },
+  crudContent: {
+    flex: 1,
+  },
+  crudCardTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    margin: "0 0 4px 0",
+    color: "#2d3748",
+  },
+  crudCardDescription: {
+    fontSize: "14px",
+    color: "#718096",
+    margin: 0,
+  },
+}
+
+export default AdminDashboard
+

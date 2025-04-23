@@ -1,0 +1,350 @@
+import React, { useState, useEffect } from "react";
+
+const ControlServoMotor = () => {
+  const [servoStatus, setServoStatus] = useState("Desactivado");
+  const [motorStatus, setMotorStatus] = useState("Apagado");
+  const [statusMessage, setStatusMessage] = useState("Esperando...");
+  const [colores, setColores] = useState([]);
+  const [bandas, setBandas] = useState([]);
+  const [selectedBand, setSelectedBand] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [intensidad, setIntensidad] = useState(100);
+  const [nombreObjeto, setNombreObjeto] = useState("");
+  const [motorSpeed, setMotorSpeed] = useState(0);
+  const [velocidades, setVelocidades] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/getColores")
+      .then((response) => response.json())
+      .then((data) => setColores(data))
+      .catch((error) => console.error("Error al obtener los colores", error));
+
+    fetch("http://localhost:5000/getBandas")
+      .then((response) => response.json())
+      .then((data) => setBandas(data))
+      .catch((error) => console.error("Error al obtener las bandas", error));
+  }, []);
+
+  const handleBandChange = (band) => {
+    setSelectedBand(band);
+    if (band === "Banda A") {
+      fetchVelocidades();
+    } else {
+      setVelocidades([]);
+    }
+  };
+
+  const fetchVelocidades = () => {
+    fetch("http://localhost:5000/getVelocidades")
+      .then((response) => response.json())
+      .then((data) => setVelocidades(data))
+      .catch((error) => console.error("Error al obtener las velocidades", error));
+  };
+
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const fecha = now.toISOString().split('T')[0];
+    const hora = now.toTimeString().split(' ')[0];
+    return { fecha, hora };
+  };
+
+  const insertObjectRecord = async (object) => {
+    const { fecha, hora } = getCurrentDateTime();
+    const data = { object, fecha, hora };
+
+    try {
+      const response = await fetch("http://localhost:5000/insertarRegistro", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      setStatusMessage(result.message || "Registro insertado correctamente.");
+    } catch (error) {
+      console.error("Error al insertar el registro:", error);
+      setStatusMessage("Error al insertar el registro.");
+    }
+  };
+
+  const sendCommand = async (command) => {
+    if (selectedBand === "Banda A") {
+      try {
+        const response = await fetch(`http://192.168.1.100/${command}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.text();
+        setStatusMessage(data);
+
+        if (command === "ENCENDER") {
+          setServoStatus("Activado");
+        } else if (command === "APAGAR") {
+          setServoStatus("Desactivado");
+        } else if (command === "encender") {
+          setMotorStatus("Encendido");
+        } else if (command === "apagar") {
+          setMotorStatus("Apagado");
+        }
+      } catch (error) {
+        console.error("Error de conexión:", error);
+        setStatusMessage("Error en la conexión");
+      }
+    } else {
+      setStatusMessage("En mantenimiento");
+    }
+  };
+
+  const setMotorSpeedCommand = async () => {
+    if (selectedBand === "Banda A") {
+      const roundedSpeed = Math.min(Math.round(motorSpeed), 255);
+      try {
+        const response = await fetch(`http://192.168.1.100/speed/${roundedSpeed}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.text();
+        setStatusMessage(data);
+      } catch (error) {
+        console.error("Error al establecer la velocidad del motor:", error);
+      }
+    } else {
+      setStatusMessage("En mantenimiento");
+    }
+  };
+
+  const sendColorAndIntensity = async () => {
+    if (selectedBand === "Banda A" && selectedColor) {
+      try {
+        const response = await fetch(`http://192.168.1.100/color`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            color: selectedColor,
+            intensidad: intensidad,
+            nombreObjeto: nombreObjeto,
+          }),
+        });
+
+        const data = await response.text();
+        setStatusMessage(data);
+      } catch (error) {
+        console.error("Error al enviar el color e intensidad:", error);
+        setStatusMessage("Error al enviar el color e intensidad.");
+      }
+    } else {
+      setStatusMessage("Selecciona una banda y un color.");
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Control de Servos y Motor</h1>
+      <div style={styles.statusContainer}>
+        <p style={styles.status}>
+          <strong>Servo:</strong> {servoStatus}
+        </p>
+        <p style={styles.status}>
+          <strong>Motor:</strong> {motorStatus}
+        </p>
+      </div>
+      <p style={styles.message}>{statusMessage}</p>
+      <div style={styles.section}>
+        <label htmlFor="bandas" style={styles.label}>Seleccionar Banda:</label>
+        <select
+          id="bandas"
+          value={selectedBand}
+          onChange={(e) => handleBandChange(e.target.value)}
+          style={styles.select}
+        >
+          <option value="">Seleccione una banda</option>
+          {bandas.map((banda) => (
+            <option key={banda.id_banda} value={banda.nombre}>
+              {banda.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+      {selectedBand === "Banda A" && (
+        <div style={styles.section}>
+          <button style={styles.button} onClick={() => sendCommand("ENCENDER")}>Encender Servos</button>
+          <button style={styles.button} onClick={() => sendCommand("APAGAR")}>Apagar Servos</button>
+          <button style={styles.button} onClick={() => sendCommand("encender")}>Encender Motor</button>
+          <button style={styles.button} onClick={() => sendCommand("apagar")}>Apagar Motor</button>
+          <div style={styles.section}>
+            <label htmlFor="motorSpeed" style={styles.label}>Velocidad del Motor:</label>
+            <select
+              id="motorSpeed"
+              value={motorSpeed}
+              onChange={(e) => setMotorSpeed(e.target.value)}
+              style={styles.select}
+            >
+              <option value="">Seleccione velocidad</option>
+              {velocidades.map((vel) => (
+                <option key={vel.id_banda} value={vel.velocidad}>
+                  {Math.round(vel.velocidad)}
+                </option>
+              ))}
+            </select>
+            <button style={styles.button} onClick={setMotorSpeedCommand}>Establecer Velocidad</button>
+            <div>
+              <label htmlFor="manualSpeed">O establecer manualmente:</label>
+              <input
+                type="number"
+                id="manualSpeed"
+                min="1"
+                max="255"
+                value={motorSpeed}
+                onChange={(e) => setMotorSpeed(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={styles.section}>
+        <label htmlFor="intensidad" style={styles.label}>Intensidad de detección de color:</label>
+        <input
+          type="range"
+          id="intensidad"
+          min="1"
+          max="100"
+          value={intensidad}
+          onChange={(e) => setIntensidad(e.target.value)}
+          style={styles.range}
+        />
+        <span style={styles.rangeValue}>{intensidad}%</span>
+      </div>
+      <div style={styles.section}>
+        <label htmlFor="color" style={styles.label}>Seleccionar Color:</label>
+        <select
+          id="color"
+          value={selectedColor}
+          onChange={(e) => setSelectedColor(e.target.value)}
+          style={styles.select}
+        >
+          <option value="">Seleccione un color</option>
+          {colores.map((color) => (
+            <option key={color.nombre} value={color.nombre}>
+              {color.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div style={styles.section}>
+        <label style={styles.label}>Nombre del Objeto (Opcional):</label>
+        <input
+          type="text"
+          value={nombreObjeto}
+          onChange={(e) => setNombreObjeto(e.target.value)}
+          placeholder="Nombre del objeto"
+          style={styles.input}
+        />
+      </div>
+      <div style={styles.section}>
+        <button style={styles.buttonPrimary} onClick={sendColorAndIntensity}>Enviar Color e Intensidad</button>
+      </div>
+    </div>
+  );
+};
+
+const styles = {
+  container: {
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+    maxWidth: "700px",
+    margin: "20px auto",
+  },
+  title: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    marginBottom: "20px",
+    textAlign: "center",
+    color: "#2d3748",
+  },
+  statusContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "20px",
+  },
+  status: {
+    fontSize: "16px",
+    color: "#4a5568",
+  },
+  message: {
+    fontSize: "14px",
+    marginBottom: "20px",
+    color: "#718096",
+    textAlign: "center",
+  },
+  section: {
+    marginBottom: "20px",
+  },
+  label: {
+    display: "block",
+    fontSize: "14px",
+    marginBottom: "8px",
+    color: "#4a5568",
+  },
+  select: {
+    width: "100%",
+    padding: "10px",
+    fontSize: "14px",
+    borderRadius: "6px",
+    border: "1px solid #cbd5e0",
+    backgroundColor: "#f7fafc",
+  },
+  input: {
+    width: "100%",
+    padding: "10px",
+    fontSize: "14px",
+    borderRadius: "6px",
+    border: "1px solid #cbd5e0",
+    backgroundColor: "#f7fafc",
+  },
+  range: {
+    width: "100%",
+  },
+  rangeValue: {
+    display: "block",
+    marginTop: "8px",
+    fontSize: "14px",
+    color: "#4a5568",
+  },
+  button: {
+    padding: "10px 20px",
+    fontSize: "14px",
+    borderRadius: "6px",
+    border: "none",
+    backgroundColor: "#3182ce",
+    color: "#fff",
+    cursor: "pointer",
+    marginRight: "10px",
+    marginBottom: "10px",
+    transition: "background-color 0.2s",
+  },
+  buttonPrimary: {
+    padding: "10px 20px",
+    fontSize: "14px",
+    borderRadius: "6px",
+    border: "none",
+    backgroundColor: "#38a169",
+    color: "#fff",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+    width: "100%",
+    textAlign: "center",
+  },
+};
+
+export default ControlServoMotor;

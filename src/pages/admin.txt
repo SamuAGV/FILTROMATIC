@@ -1,0 +1,335 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Filter, User, ListChecks, Database, LogOut, Power, AlertTriangle, Users, Activity, Settings, BarChart, Link } from "lucide-react";
+
+import Logo from "../assets/LogoFM.jpeg"; // Importa el logo
+
+const AdminDashboard = () => {
+  const navigate = useNavigate();
+  const [nombreAdministrador, setNombreAdministrador] = useState(""); // Estado para el nombre del administrador
+  const [systemSummary, setSystemSummary] = useState({
+    totalSensores: 0,
+    totalFiltros: 0,
+    totalRegistros: 0,
+  });
+  const [isSystemOn, setIsSystemOn] = useState(false); // Estado para el botón de encendido/apagado
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login"); // Redirigir si no hay token
+    } else {
+      // Obtener los datos del administrador desde la API
+      fetch("http://localhost:3001/api/registros")
+        .then((response) => response.json())
+        .then((data) => {
+          const administrador = data.find((user) => user.id_rol === 1); // Filtrar por id_rol: 1
+          if (administrador) {
+            setNombreAdministrador(administrador.nombre); // Asignar el nombre del administrador
+          } else {
+            setNombreAdministrador("Administrador"); // Valor por defecto si no se encuentra el administrador
+          }
+        })
+        .catch((error) => {
+          console.error("Error al obtener los datos del administrador:", error);
+          setNombreAdministrador("Administrador"); // Valor por defecto en caso de error
+        });
+
+      fetchSystemSummary();
+    }
+  }, [navigate]);
+
+  const fetchSystemSummary = async () => {
+    setTimeout(() => {
+      setSystemSummary({
+        totalSensores: 10,
+        totalFiltros: 25,
+        totalRegistros: 100,
+      });
+    }, 1000);
+  };
+
+  const handleCerrarSesion = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
+
+  const handleSystemToggle = () => {
+    setIsSystemOn(!isSystemOn);
+    // Aquí puedes agregar la lógica para encender/apagar el sistema
+  };
+
+  const handleEmergency = () => {
+    // Aquí puedes agregar la lógica para manejar la emergencia
+    alert("¡Emergencia activada!");
+  };
+
+  const crudItems = [
+    { name: "Clientes", icon: User, description: "Gestionar a los clientes", route: "/clientes" },
+    { name: "Roles", icon: ListChecks, description: "Administrar tipos de roles", route: "/roles" },
+    { name: "Usuarios", icon: Users, description: "Gestión de usuarios", route: "/usuarios" },
+    { name: "Registros", icon: Database, description: "Historial de datos registrados", route: "/registros" },
+    { name: "Banda", icon: Activity, description: "Control de la banda transportadora", route: "/banda" },
+    { name: "Controles", icon: Settings, description: "Configuración de controles", route: "/controles" },
+    { name: "Sensores", icon: BarChart, description: "Datos de sensores", route: "/sensores" },
+    { name: "Relaciones", icon: Link, description: "Relaciones entre elementos", route: "/relaciones" },
+  ];
+
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        {/* Agrega el logo aquí */}
+        <img src={Logo} alt="Logo" style={styles.logo} />
+        <h1 style={styles.title}>Filtromatic</h1>
+        <div style={styles.userInfo}>
+          <span><strong>Bienvenido!!! -</strong></span>
+          <span><strong>{nombreAdministrador}</strong></span>
+          <button onClick={handleCerrarSesion} style={styles.logoutButton}>
+            <LogOut size={20} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </header>
+      <br />
+      <h1 style={styles.title}>Panel de Control</h1>
+
+      <br />
+      {/* Nuevo bloque de controles */}
+      <section style={styles.controlsSection}>
+          <h2>Controles de la banda</h2>
+          <div style={styles.buttonContainer}>
+            <button onClick={handleSystemToggle} style={isSystemOn ? styles.onButton : styles.offButton}>
+              <Power size={20} />
+              <span>{isSystemOn ? "Apagar" : "Encender"}</span>
+            </button>
+            <button onClick={handleEmergency} style={styles.emergencyButton}>
+              <AlertTriangle size={20} />
+              <span>Emergencia</span>
+            </button>
+          </div>
+        </section>
+      <main style={styles.main}>
+        <section style={styles.metricsSection}>
+          <h2>Métricas del Sistema</h2>
+          <div style={styles.metricsGrid}>
+            <MetricaCard titulo="Sensores Activos" valor={systemSummary.totalSensores} cambio="+10%" />
+            <MetricaCard titulo="Filtros Configurados" valor={systemSummary.totalFiltros} cambio="+5%" />
+            <MetricaCard titulo="Registros Totales" valor={systemSummary.totalRegistros} cambio="+20%" />
+          </div>
+        </section>
+
+        
+
+        <section style={styles.crudSection}>
+          <h2>Gestión de Filtromatic</h2>
+          <div style={styles.crudGrid}>
+            {crudItems.map((item) => (
+              <CrudCard key={item.name} item={item} navigate={navigate} />
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+};
+
+const MetricaCard = ({ titulo, valor, cambio }) => (
+  <div style={styles.metricaCard}>
+    <h3>{titulo}</h3>
+    <p style={styles.metricaValor}>{valor}</p>
+    <p style={styles.metricaCambio}>{cambio} desde el último análisis</p>
+  </div>
+);
+
+const CrudCard = ({ item, navigate }) => (
+  <div style={styles.crudCard}>
+    <item.icon size={40} style={styles.crudIcon} />
+    <h3 style={styles.crudCardTitle}>{item.name}</h3>
+    <p style={styles.crudCardDescription}>{item.description}</p>
+    <button style={styles.crudButton} onClick={() => navigate(item.route)}>
+      Ir a {item.name}
+    </button>
+  </div>
+);
+
+const styles = {
+  container: {
+    fontFamily: "Arial, sans-serif",
+    backgroundColor: "#f0f2f5",
+    minHeight: "100vh",
+  },
+  header: {
+    backgroundColor: "#ffffff",
+    padding: "0px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  logo: {
+    height: "100px", // Ajusta el tamaño del logo según sea necesario
+    marginRight: "25px", // Espacio entre el logo y el título
+    borderRadius: "50%", // Forma redondeada
+    border: "1px solid #ddd", // Borde del logo
+    padding: "5px", // Espacio interno del borde
+
+  },
+  title: {
+    fontSize: "24px",
+    margin: 0,
+  },
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+  },
+  logoutButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "8px 15px",
+    backgroundColor: "#d9534f",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    transition: "background-color 0.3s",
+    ":hover": {
+      backgroundColor: "#c9302c",
+    },
+  },
+  main: {
+    padding: "20px",
+  },
+  metricsSection: {
+    marginBottom: "30px",
+  },
+  metricsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "20px",
+  },
+  metricaCard: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  metricaValor: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    margin: "10px 0",
+  },
+  metricaCambio: {
+    fontSize: "14px",
+    color: "#28a745",
+  },
+  controlsSection: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    marginBottom: "30px",
+    textAlign: "center",
+  },
+  buttonContainer: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
+    marginTop: "10px",
+  },
+  onButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "8px 15px",
+    backgroundColor: "#28a745",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    transition: "background-color 0.3s",
+    ":hover": {
+      backgroundColor: "#218838",
+    },
+  },
+  offButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "8px 15px",
+    backgroundColor: "#dc3545",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    transition: "background-color 0.3s",
+    ":hover": {
+      backgroundColor: "#c82333",
+    },
+  },
+  emergencyButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "8px 15px",
+    backgroundColor: "#ffc107",
+    color: "black",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    transition: "background-color 0.3s",
+    ":hover": {
+      backgroundColor: "#e0a800",
+    },
+  },
+  crudSection: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  crudGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "20px",
+    marginTop: "20px",
+  },
+  crudCard: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    textAlign: "center",
+  },
+  crudIcon: {
+    color: "#4a5568",
+    marginBottom: "10px",
+  },
+  crudCardTitle: {
+    fontSize: "20px",
+    color: "#2d3748",
+    marginBottom: "10px",
+    fontWeight: "bold",
+  },
+  crudCardDescription: {
+    fontSize: "14px",
+    color: "#718096",
+    marginBottom: "20px",
+  },
+  crudButton: {
+    padding: "10px 15px",
+    backgroundColor: "#2d3748",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    transition: "background-color 0.3s",
+    ":hover": {
+      backgroundColor: "#1a202c",
+    },
+  },
+};
+
+export default AdminDashboard;

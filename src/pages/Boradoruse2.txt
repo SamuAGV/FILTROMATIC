@@ -1,0 +1,251 @@
+import { Box, CircleDot, Trash2, Activity, AlertCircle, Settings } from "lucide-react"
+
+const DashboardFiltromatic = () => {
+  // Datos de ejemplo - Reemplazar con datos reales de tu sistema
+  const estadisticas = {
+    clasificacionActual: {
+      azul: 245,
+      verde: 189,
+      amarillo: 312,
+      rojo: 156,
+    },
+    eficiencia: "87%",
+    erroresDetectados: 12,
+    tiempoOperacion: "5h 23m",
+    mantenimiento: "Programado en 2 días",
+    estadoSistema: "Operativo",
+  }
+
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Sistema de Clasificación Filtromatic</h1>
+      <div style={styles.grid}>
+        {/* Clasificación por Colores */}
+        <div style={styles.card}>
+          <div style={styles.iconContainer}>
+            <Box style={styles.icon} />
+          </div>
+          <h2 style={styles.cardTitle}>Clasificación por Colores</h2>
+          <div style={styles.statsContainer}>
+            <div style={styles.statItem}>
+              <span style={{ ...styles.statLabel, color: "#2196F3" }}>Azul</span>
+              <span style={styles.statValue}>{estadisticas.clasificacionActual.azul}</span>
+            </div>
+            <div style={styles.statItem}>
+              <span style={{ ...styles.statLabel, color: "#4CAF50" }}>Verde</span>
+              <span style={styles.statValue}>{estadisticas.clasificacionActual.verde}</span>
+            </div>
+            <div style={styles.statItem}>
+              <span style={{ ...styles.statLabel, color: "#FFC107" }}>Amarillo</span>
+              <span style={styles.statValue}>{estadisticas.clasificacionActual.amarillo}</span>
+            </div>
+            <div style={styles.statItem}>
+              <span style={{ ...styles.statLabel, color: "#F44336" }}>Rojo</span>
+              <span style={styles.statValue}>{estadisticas.clasificacionActual.rojo}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Estado del Sistema */}
+        <div style={styles.card}>
+          <div style={styles.iconContainer}>
+            <CircleDot style={styles.icon} />
+          </div>
+          <h2 style={styles.cardTitle}>Estado del Sistema</h2>
+          <div style={styles.statusContainer}>
+            <div style={styles.statusItem}>
+              <span style={styles.statusLabel}>Estado:</span>
+              <span style={styles.statusValue}>{estadisticas.estadoSistema}</span>
+            </div>
+            <div style={styles.statusItem}>
+              <span style={styles.statusLabel}>Tiempo de Operación:</span>
+              <span style={styles.statusValue}>{estadisticas.tiempoOperacion}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Eficiencia */}
+        <div style={styles.card}>
+          <div style={styles.iconContainer}>
+            <Activity style={styles.icon} />
+          </div>
+          <h2 style={styles.cardTitle}>Eficiencia del Sistema</h2>
+          <div style={styles.efficiencyContainer}>
+            <span style={styles.efficiencyValue}>{estadisticas.eficiencia}</span>
+            <span style={styles.efficiencyLabel}>de precisión en la clasificación</span>
+          </div>
+        </div>
+
+        {/* Errores Detectados */}
+        <div style={styles.card}>
+          <div style={styles.iconContainer}>
+            <AlertCircle style={styles.icon} />
+          </div>
+          <h2 style={styles.cardTitle}>Errores Detectados</h2>
+          <div style={styles.errorContainer}>
+            <span style={styles.errorValue}>{estadisticas.erroresDetectados}</span>
+            <span style={styles.errorLabel}>errores en las últimas 24 horas</span>
+          </div>
+        </div>
+
+        {/* Residuos Procesados */}
+        <div style={styles.card}>
+          <div style={styles.iconContainer}>
+            <Trash2 style={styles.icon} />
+          </div>
+          <h2 style={styles.cardTitle}>Total Residuos Procesados</h2>
+          <div style={styles.totalContainer}>
+            <span style={styles.totalValue}>
+              {Object.values(estadisticas.clasificacionActual).reduce((a, b) => a + b, 0)}
+            </span>
+            <span style={styles.totalLabel}>objetos procesados hoy</span>
+          </div>
+        </div>
+
+        {/* Mantenimiento */}
+        <div style={styles.card}>
+          <div style={styles.iconContainer}>
+            <Settings style={styles.icon} />
+          </div>
+          <h2 style={styles.cardTitle}>Próximo Mantenimiento</h2>
+          <div style={styles.maintenanceContainer}>
+            <span style={styles.maintenanceValue}>{estadisticas.mantenimiento}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const styles = {
+  container: {
+    padding: "2rem",
+    backgroundColor: "#f5f5f5",
+    minHeight: "100vh",
+  },
+  title: {
+    color: "#2C3E50",
+    marginBottom: "2rem",
+    fontSize: "1.8rem",
+    fontWeight: "600",
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gap: "2rem",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: "12px",
+    padding: "1.5rem",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  iconContainer: {
+    backgroundColor: "#E3F2FD",
+    borderRadius: "50%",
+    width: "40px",
+    height: "40px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "1rem",
+  },
+  icon: {
+    color: "#1976D2",
+    width: "20px",
+    height: "20px",
+  },
+  cardTitle: {
+    color: "#2C3E50",
+    fontSize: "1.1rem",
+    fontWeight: "600",
+    marginBottom: "1rem",
+  },
+  statsContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "1rem",
+  },
+  statItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  statLabel: {
+    fontSize: "0.9rem",
+    fontWeight: "500",
+    marginBottom: "0.25rem",
+  },
+  statValue: {
+    fontSize: "1.5rem",
+    fontWeight: "600",
+  },
+  statusContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+  },
+  statusItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusLabel: {
+    color: "#666",
+    fontSize: "0.9rem",
+  },
+  statusValue: {
+    color: "#2C3E50",
+    fontWeight: "500",
+  },
+  efficiencyContainer: {
+    textAlign: "center",
+  },
+  efficiencyValue: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    color: "#4CAF50",
+    display: "block",
+  },
+  efficiencyLabel: {
+    color: "#666",
+    fontSize: "0.9rem",
+  },
+  errorContainer: {
+    textAlign: "center",
+  },
+  errorValue: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    color: "#F44336",
+    display: "block",
+  },
+  errorLabel: {
+    color: "#666",
+    fontSize: "0.9rem",
+  },
+  totalContainer: {
+    textAlign: "center",
+  },
+  totalValue: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    color: "#1976D2",
+    display: "block",
+  },
+  totalLabel: {
+    color: "#666",
+    fontSize: "0.9rem",
+  },
+  maintenanceContainer: {
+    textAlign: "center",
+    color: "#666",
+    fontSize: "1.1rem",
+  },
+  maintenanceValue: {
+    fontWeight: "500",
+  },
+}
+
+export default DashboardFiltromatic
+

@@ -1,0 +1,1049 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+
+import {
+  Filter,
+  User,
+  ListChecks,
+  Database,
+  LogOut,
+  Power,
+  AlertTriangle,
+  Users,
+  Activity,
+  Settings,
+  BarChart,
+  Link,
+  Menu,
+  X,
+} from "lucide-react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import Logo from "../assets/LogoFM.jpeg"
+
+const AdminDashboard = () => {
+  const navigate = useNavigate()
+  const [nombreAdministrador, setNombreAdministrador] = useState("")
+  const [systemSummary, setSystemSummary] = useState({
+    totalSensores: 0,
+    totalFiltros: 0,
+    totalRegistros: 0,
+  })
+  const [isSystemOn, setIsSystemOn] = useState(false)
+  const [sensorData, setSensorData] = useState([])
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [activeItem, setActiveItem] = useState("/dashboard")
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 0)
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      navigate("/login")
+    } else {
+      fetch("http://localhost:3001/api/registros")
+        .then((response) => response.json())
+        .then((data) => {
+          const administrador = data.find((user) => user.id_rol === 1)
+          if (administrador) {
+            setNombreAdministrador(administrador.nombre)
+          } else {
+            setNombreAdministrador("Administrador")
+          }
+        })
+        .catch((error) => {
+          console.error("Error al obtener los datos del administrador:", error)
+          setNombreAdministrador("Administrador")
+        })
+
+      fetchSystemSummary()
+      fetchSensorData()
+    }
+  }, [navigate])
+
+  const fetchSystemSummary = async () => {
+    setTimeout(() => {
+      setSystemSummary({
+        totalSensores: 10,
+        totalFiltros: 25,
+        totalRegistros: 100,
+      })
+    }, 1000)
+  }
+
+  const fetchSensorData = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/registross");
+      const data = await response.json();
+  
+      // Formatear los datos para la gráfica
+      const formattedData = data.map((registro) => ({
+        time: `${registro.fecha} ${registro.hora}`, // Combinar fecha y hora
+        value: registro.id_, // Usar el ID como valor temporal (o simular un valor)
+      }));
+  
+      setSensorData(formattedData);
+    } catch (error) {
+      console.error("Error al obtener los datos de los sensores:", error);
+    }
+  };
+
+  const handleCerrarSesion = () => {
+    localStorage.removeItem("token")
+    navigate("/login")
+  }
+
+  const handleSystemToggle = () => {
+    setIsSystemOn(!isSystemOn)
+    // Aquí puedes agregar la lógica para encender/apagar el sistema
+  }
+
+  const handleEmergency = () => {
+    // Aquí puedes agregar la lógica para manejar la emergencia
+    alert("¡Emergencia activada!")
+  }
+
+  const crudItems = [
+    { name: "Clientes", icon: User, description: "Gestionar a los clientes", route: "/clientes" },
+    { name: "Roles", icon: ListChecks, description: "Administrar tipos de roles", route: "/roles" },
+    { name: "Usuarios", icon: Users, description: "Gestión de usuarios", route: "/usuarios" },
+    { name: "Registros", icon: Database, description: "Historial de datos registrados", route: "/registros" },
+    { name: "Banda", icon: Activity, description: "Control de la banda transportadora", route: "/banda" },
+    { name: "Controles", icon: Settings, description: "Configuración de controles", route: "/controles" },
+    { name: "Sensores", icon: BarChart, description: "Datos de sensores", route: "/sensores" },
+    { name: "Relaciones", icon: Link, description: "Relaciones entre elementos", route: "/relaciones" },
+  ]
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth
+      setWindowWidth(width)
+      if (width > 768) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    handleResize() // Call once on mount
+
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [])
+
+  const handleNavigation = (route) => {
+    setActiveItem(route)
+    navigate(route)
+    if (windowWidth <= 768) {
+      setIsMobileMenuOpen(false)
+    }
+  }
+
+  // Determinar si estamos en un dispositivo móvil pequeño
+  const isSmallMobile = windowWidth <= 480
+
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <div style={styles.headerLeft}>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={styles.mobileMenuButton}>
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <img src={Logo || "/placeholder.svg"} alt="Logo" style={styles.logo} />
+          {!isSmallMobile && <h1 style={styles.headerTitle}>Filtromatic</h1>}
+        </div>
+        <div style={styles.userInfo}>
+          {!isSmallMobile && (
+            <div style={styles.userDetails}>
+              <span style={styles.welcomeText}>Bienvenido</span>
+              <span style={styles.userName}>{nombreAdministrador}</span>
+            </div>
+          )}
+          <button onClick={handleCerrarSesion} style={styles.logoutButton}>
+            <LogOut size={18} />
+            {!isSmallMobile && <span style={styles.logoutText}>Cerrar Sesión</span>}
+          </button>
+        </div>
+      </header>
+
+      <div style={styles.dashboardContainer}>
+        {/* Sidebar para móvil */}
+        {windowWidth <= 768 && (
+          <div
+            style={{
+              ...styles.mobileSidebar,
+              transform: isMobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
+            }}
+          >
+            <div style={styles.sidebarHeader}>
+              <h2 style={styles.sidebarTitle}>Panel de Control</h2>
+            </div>
+            <div style={styles.sidebarMenu}>
+              {crudItems.map((item) => (
+                <div
+                  key={item.name}
+                  style={{
+                    ...styles.sidebarItem,
+                    ...(activeItem === item.route ? styles.sidebarItemActive : {}),
+                  }}
+                  onClick={() => handleNavigation(item.route)}
+                >
+                  <item.icon
+                    size={20}
+                    style={{
+                      ...styles.sidebarIcon,
+                      ...(activeItem === item.route ? styles.sidebarIconActive : {}),
+                    }}
+                  />
+                  <span
+                    style={{
+                      ...styles.sidebarText,
+                      ...(activeItem === item.route ? styles.sidebarTextActive : {}),
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar para desktop */}
+        {windowWidth > 768 && (
+          <div style={styles.sidebar}>
+            <div style={styles.sidebarHeader}>
+              <h2 style={styles.sidebarTitle}>Panel de Control</h2>
+            </div>
+            <div style={styles.sidebarMenu}>
+              {crudItems.map((item) => (
+                <div
+                  key={item.name}
+                  style={{
+                    ...styles.sidebarItem,
+                    ...(activeItem === item.route ? styles.sidebarItemActive : {}),
+                  }}
+                  onClick={() => handleNavigation(item.route)}
+                >
+                  <item.icon
+                    size={20}
+                    style={{
+                      ...styles.sidebarIcon,
+                      ...(activeItem === item.route ? styles.sidebarIconActive : {}),
+                    }}
+                  />
+                  <span
+                    style={{
+                      ...styles.sidebarText,
+                      ...(activeItem === item.route ? styles.sidebarTextActive : {}),
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <main style={styles.mainContent}>
+          <div style={styles.pageHeader}>
+            <h1 style={styles.pageTitle}>Panel de Control</h1>
+            <div style={styles.controlButtons}>
+              <button onClick={handleSystemToggle} style={isSystemOn ? styles.onButton : styles.offButton}>
+                <Power size={isSmallMobile ? 16 : 18} />
+                {!isSmallMobile && <span>{isSystemOn ? "Apagar Sistema" : "Encender Sistema"}</span>}
+              </button>
+              <button onClick={handleEmergency} style={styles.emergencyButton}>
+                <AlertTriangle size={isSmallMobile ? 16 : 18} />
+                {!isSmallMobile && <span>Emergencia</span>}
+              </button>
+            </div>
+          </div>
+
+          <section style={styles.metricsSection}>
+            <h2 style={styles.sectionTitle}>Métricas del Sistema</h2>
+            <div style={styles.metricsGrid}>
+              <MetricaCard
+                titulo="Sensores Activos"
+                valor={systemSummary.totalSensores}
+                cambio="+10%"
+                icon={<BarChart size={24} style={styles.metricIcon} />}
+                color="#4361ee"
+                isSmallMobile={isSmallMobile}
+              />
+              <MetricaCard
+                titulo="Filtros Configurados"
+                valor={systemSummary.totalFiltros}
+                cambio="+5%"
+                icon={<Filter size={24} style={styles.metricIcon} />}
+                color="#3a0ca3"
+                isSmallMobile={isSmallMobile}
+              />
+              <MetricaCard
+                titulo="Registros Totales"
+                valor={systemSummary.totalRegistros}
+                cambio="+20%"
+                icon={<Database size={24} style={styles.metricIcon} />}
+                color="#7209b7"
+                isSmallMobile={isSmallMobile}
+              />
+            </div>
+          </section>
+
+          <section style={styles.chartSection}>
+            <h2 style={styles.sectionTitle}>Datos de Sensores en Tiempo Real</h2>
+            <div style={styles.chartContainer}>
+              <ResponsiveContainer width="100%" height={isSmallMobile ? 200 : 300}>
+                <LineChart
+                  data={sensorData}
+                  margin={{
+                    top: 5,
+                    right: isSmallMobile ? 10 : 30,
+                    left: isSmallMobile ? 0 : 20,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="time" stroke="#718096" tick={{ fontSize: isSmallMobile ? 10 : 12 }} />
+                  <YAxis stroke="#718096" tick={{ fontSize: isSmallMobile ? 10 : 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      fontSize: isSmallMobile ? 10 : 12,
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: isSmallMobile ? 10 : 12 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#4361ee"
+                    strokeWidth={2}
+                    activeDot={{ r: isSmallMobile ? 6 : 8 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section style={styles.crudSection}>
+            <h2 style={styles.sectionTitle}>Gestión de Filtromatic</h2>
+            <div style={styles.crudGrid}>
+              {crudItems.map((item) => (
+                <CrudCard key={item.name} item={item} navigate={navigate} isSmallMobile={isSmallMobile} />
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
+
+      {/* Overlay for mobile menu */}
+      {isMobileMenuOpen && windowWidth <= 768 && (
+        <div style={styles.overlay} onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+    </div>
+  )
+}
+
+const MetricaCard = ({ titulo, valor, cambio, icon, color, isSmallMobile }) => (
+  <div style={styles.metricaCard}>
+    <div style={styles.metricaHeader}>
+      <div
+        style={{
+          ...styles.metricaIconContainer,
+          backgroundColor: `${color}20`,
+          width: isSmallMobile ? "40px" : "48px",
+          height: isSmallMobile ? "40px" : "48px",
+        }}
+      >
+        {icon}
+      </div>
+      <div style={styles.metricaChange}>
+        <span style={styles.metricaCambio}>{cambio}</span>
+      </div>
+    </div>
+    <h3
+      style={{
+        ...styles.metricaTitulo,
+        fontSize: isSmallMobile ? "12px" : "14px",
+      }}
+    >
+      {titulo}
+    </h3>
+    <p
+      style={{
+        ...styles.metricaValor,
+        fontSize: isSmallMobile ? "24px" : "32px",
+      }}
+    >
+      {valor}
+    </p>
+  </div>
+)
+
+const CrudCard = ({ item, navigate, isSmallMobile }) => (
+  <div style={styles.crudCard} onClick={() => navigate(item.route)}>
+    <div
+      style={{
+        ...styles.crudIconContainer,
+        width: isSmallMobile ? "40px" : "56px",
+        height: isSmallMobile ? "40px" : "56px",
+      }}
+    >
+      <item.icon size={isSmallMobile ? 18 : 24} style={styles.crudIcon} />
+    </div>
+    <div style={styles.crudContent}>
+      <h3
+        style={{
+          ...styles.crudCardTitle,
+          fontSize: isSmallMobile ? "14px" : "18px",
+        }}
+      >
+        {item.name}
+      </h3>
+      <p
+        style={{
+          ...styles.crudCardDescription,
+          fontSize: isSmallMobile ? "12px" : "14px",
+        }}
+      >
+        {item.description}
+      </p>
+    </div>
+  </div>
+)
+
+const styles = {
+  container: {
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    backgroundColor: "#f8fafc",
+    minHeight: "100vh",
+    color: "#2d3748",
+    width: "100%",
+    overflow: "hidden",
+  },
+  header: {
+    backgroundColor: "#ffffff",
+    padding: "0 16px",
+    height: "70px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    width: "100%",
+    "@media (max-width: 768px)": {
+      padding: "0 12px",
+      height: "60px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "0 8px",
+      height: "50px",
+    },
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+  },
+  logo: {
+    height: "50px",
+    width: "50px",
+    borderRadius: "50%",
+    objectFit: "cover",
+    border: "2px solid #e2e8f0",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+    "@media (max-width: 768px)": {
+      height: "40px",
+      width: "40px",
+    },
+    "@media (max-width: 480px)": {
+      height: "36px",
+      width: "36px",
+    },
+  },
+  headerTitle: {
+    fontSize: "22px",
+    fontWeight: "700",
+    margin: "0 0 0 12px",
+    color: "#2d3748",
+    background: "linear-gradient(90deg, #4361ee 0%, #7209b7 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    "@media (max-width: 768px)": {
+      fontSize: "18px",
+      margin: "0 0 0 8px",
+    },
+  },
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    "@media (max-width: 768px)": {
+      gap: "8px",
+    },
+    "@media (max-width: 480px)": {
+      gap: "4px",
+    },
+  },
+  userDetails: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+  },
+  welcomeText: {
+    fontSize: "12px",
+    color: "#718096",
+    "@media (max-width: 768px)": {
+      fontSize: "10px",
+    },
+  },
+  userName: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#2d3748",
+    "@media (max-width: 768px)": {
+      fontSize: "12px",
+    },
+  },
+  logoutButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    padding: "8px 16px",
+    backgroundColor: "#f56565",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    fontSize: "14px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    "@media (max-width: 768px)": {
+      padding: "6px 12px",
+      fontSize: "12px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "6px",
+      borderRadius: "50%",
+      width: "32px",
+      height: "32px",
+    },
+  },
+  dashboardContainer: {
+    display: "flex",
+    height: "calc(100vh - 70px)",
+    flexDirection: "row",
+    width: "100%",
+    "@media (max-width: 768px)": {
+      height: "calc(100vh - 60px)",
+    },
+    "@media (max-width: 480px)": {
+      height: "calc(100vh - 50px)",
+    },
+  },
+  sidebar: {
+    width: "240px",
+    backgroundColor: "#1e293b",
+    color: "#e2e8f0",
+    height: "100%",
+    boxShadow: "4px 0 10px rgba(0,0,0,0.1)",
+    transition: "transform 0.3s ease",
+    zIndex: 50,
+    overflowY: "auto",
+    "@media (max-width: 768px)": {
+      display: "none",
+    },
+  },
+  mobileSidebar: {
+    width: "240px",
+    backgroundColor: "#1e293b",
+    color: "#e2e8f0",
+    height: "100vh",
+    position: "fixed",
+    top: "60px",
+    left: 0,
+    boxShadow: "4px 0 10px rgba(0,0,0,0.1)",
+    transition: "transform 0.3s ease",
+    zIndex: 50,
+    overflowY: "auto",
+    "@media (max-width: 480px)": {
+      width: "85%",
+      top: "50px",
+    },
+  },
+  sidebarHeader: {
+    padding: "20px 16px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    "@media (max-width: 480px)": {
+      padding: "12px",
+    },
+  },
+  sidebarTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    margin: 0,
+    color: "#e2e8f0",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    "@media (max-width: 480px)": {
+      fontSize: "14px",
+    },
+  },
+  sidebarMenu: {
+    padding: "16px 0",
+    "@media (max-width: 480px)": {
+      padding: "8px 0",
+    },
+  },
+  sidebarItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 16px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    borderLeft: "3px solid transparent",
+    marginBottom: "4px",
+    "&:hover": {
+      backgroundColor: "rgba(255,255,255,0.1)",
+      borderLeft: "3px solid #4361ee",
+    },
+    "@media (max-width: 480px)": {
+      padding: "10px 12px",
+      marginBottom: "2px",
+    },
+  },
+  sidebarItemActive: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderLeft: "3px solid #4361ee",
+  },
+  sidebarIcon: {
+    color: "#a0aec0",
+    marginRight: "12px",
+    transition: "color 0.2s ease",
+    "@media (max-width: 480px)": {
+      marginRight: "8px",
+    },
+  },
+  sidebarIconActive: {
+    color: "#4361ee",
+  },
+  sidebarText: {
+    fontSize: "14px",
+    color: "#e2e8f0",
+    transition: "color 0.2s ease",
+    "@media (max-width: 480px)": {
+      fontSize: "12px",
+    },
+  },
+  sidebarTextActive: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  mainContent: {
+    flex: 1,
+    padding: "24px",
+    overflowY: "auto",
+    backgroundColor: "#f8fafc",
+    width: "100%",
+    "@media (max-width: 768px)": {
+      padding: "16px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "12px 8px",
+    },
+  },
+  pageHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px",
+    flexWrap: "wrap",
+    gap: "16px",
+    "@media (max-width: 640px)": {
+      flexDirection: "column",
+      alignItems: "flex-start",
+      marginBottom: "16px",
+      gap: "12px",
+    },
+  },
+  pageTitle: {
+    fontSize: "28px",
+    fontWeight: "700",
+    margin: 0,
+    color: "#1a202c",
+    position: "relative",
+    paddingBottom: "8px",
+    "&:after": {
+      content: '""',
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      width: "40px",
+      height: "3px",
+      background: "linear-gradient(90deg, #4361ee 0%, #7209b7 100%)",
+      borderRadius: "2px",
+    },
+    "@media (max-width: 768px)": {
+      fontSize: "24px",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "20px",
+      paddingBottom: "6px",
+    },
+  },
+  controlButtons: {
+    display: "flex",
+    gap: "12px",
+    "@media (max-width: 640px)": {
+      width: "100%",
+      justifyContent: "space-between",
+    },
+    "@media (max-width: 480px)": {
+      gap: "8px",
+    },
+  },
+  onButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#38a169",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    fontSize: "14px",
+    boxShadow: "0 4px 6px rgba(56, 161, 105, 0.3)",
+    "&:hover": {
+      backgroundColor: "#2f855a",
+      transform: "translateY(-2px)",
+      boxShadow: "0 6px 8px rgba(56, 161, 105, 0.4)",
+    },
+    "@media (max-width: 768px)": {
+      padding: "8px 12px",
+      fontSize: "12px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "8px",
+      borderRadius: "50%",
+      width: "36px",
+      height: "36px",
+    },
+  },
+  offButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#e53e3e",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    fontSize: "14px",
+    boxShadow: "0 4px 6px rgba(229, 62, 62, 0.3)",
+    "&:hover": {
+      backgroundColor: "#c53030",
+      transform: "translateY(-2px)",
+      boxShadow: "0 6px 8px rgba(229, 62, 62, 0.4)",
+    },
+    "@media (max-width: 768px)": {
+      padding: "8px 12px",
+      fontSize: "12px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "8px",
+      borderRadius: "50%",
+      width: "36px",
+      height: "36px",
+    },
+  },
+  emergencyButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#ecc94b",
+    color: "#744210",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontWeight: "600",
+    fontSize: "14px",
+    boxShadow: "0 4px 6px rgba(236, 201, 75, 0.3)",
+    "&:hover": {
+      backgroundColor: "#d69e2e",
+      transform: "translateY(-2px)",
+      boxShadow: "0 6px 8px rgba(236, 201, 75, 0.4)",
+    },
+    "@media (max-width: 768px)": {
+      padding: "8px 12px",
+      fontSize: "12px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "8px",
+      borderRadius: "50%",
+      width: "36px",
+      height: "36px",
+    },
+  },
+  sectionTitle: {
+    fontSize: "20px",
+    fontWeight: "600",
+    marginBottom: "16px",
+    color: "#2d3748",
+    paddingBottom: "8px",
+    borderBottom: "1px solid #e2e8f0",
+    "@media (max-width: 768px)": {
+      fontSize: "18px",
+      marginBottom: "12px",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "16px",
+      marginBottom: "10px",
+      paddingBottom: "6px",
+    },
+  },
+  metricsSection: {
+    marginBottom: "24px",
+    "@media (max-width: 480px)": {
+      marginBottom: "16px",
+    },
+  },
+  metricsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "20px",
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+      gap: "16px",
+    },
+    "@media (max-width: 480px)": {
+      gridTemplateColumns: "1fr",
+      gap: "12px",
+    },
+  },
+  metricaCard: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "12px",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-5px)",
+      boxShadow: "0 10px 15px rgba(0, 0, 0, 0.1)",
+    },
+    "@media (max-width: 768px)": {
+      padding: "16px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "12px",
+    },
+  },
+  metricaHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
+    "@media (max-width: 480px)": {
+      marginBottom: "8px",
+    },
+  },
+  metricaIconContainer: {
+    width: "48px",
+    height: "48px",
+    borderRadius: "12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+  },
+  metricIcon: {
+    color: "#4361ee",
+  },
+  metricaChange: {
+    backgroundColor: "#f0fff4",
+    padding: "4px 10px",
+    borderRadius: "20px",
+    boxShadow: "0 2px 4px rgba(56, 161, 105, 0.2)",
+    "@media (max-width: 480px)": {
+      padding: "2px 8px",
+      borderRadius: "16px",
+    },
+  },
+  metricaTitulo: {
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#718096",
+    margin: "0 0 8px 0",
+    "@media (max-width: 480px)": {
+      margin: "0 0 4px 0",
+    },
+  },
+  metricaValor: {
+    fontSize: "32px",
+    fontWeight: "700",
+    margin: "0",
+    color: "#2d3748",
+    background: "linear-gradient(90deg, #4361ee 0%, #7209b7 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+  },
+  metricaCambio: {
+    fontSize: "12px",
+    color: "#38a169",
+    fontWeight: "600",
+    "@media (max-width: 480px)": {
+      fontSize: "10px",
+    },
+  },
+  chartSection: {
+    backgroundColor: "#ffffff",
+    padding: "24px",
+    borderRadius: "12px",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1)",
+    marginBottom: "24px",
+    "@media (max-width: 768px)": {
+      padding: "16px",
+      marginBottom: "16px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "12px",
+      marginBottom: "12px",
+    },
+  },
+  chartContainer: {
+    marginTop: "16px",
+    "@media (max-width: 480px)": {
+      marginTop: "10px",
+    },
+  },
+  crudSection: {
+    marginBottom: "24px",
+    "@media (max-width: 480px)": {
+      marginBottom: "16px",
+    },
+  },
+  crudGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: "20px",
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+      gap: "16px",
+    },
+    "@media (max-width: 480px)": {
+      gridTemplateColumns: "1fr",
+      gap: "12px",
+    },
+  },
+  crudCard: {
+    backgroundColor: "#ffffff",
+    padding: "20px",
+    borderRadius: "12px",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1)",
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-5px)",
+      boxShadow: "0 10px 15px rgba(0, 0, 0, 0.1)",
+      backgroundColor: "#f8fafc",
+    },
+    "@media (max-width: 768px)": {
+      padding: "16px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "12px",
+    },
+  },
+  crudIconContainer: {
+    width: "56px",
+    height: "56px",
+    borderRadius: "12px",
+    background: "linear-gradient(135deg, #4361ee20 0%, #7209b720 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: "16px",
+    flexShrink: 0,
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
+    transition: "all 0.2s ease",
+    "@media (max-width: 480px)": {
+      marginRight: "12px",
+    },
+  },
+  crudIcon: {
+    color: "#4361ee",
+  },
+  crudContent: {
+    flex: 1,
+  },
+  crudCardTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    margin: "0 0 4px 0",
+    color: "#2d3748",
+  },
+  crudCardDescription: {
+    fontSize: "14px",
+    color: "#718096",
+    margin: 0,
+  },
+  mobileMenuButton: {
+    display: "none",
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    color: "#4361ee",
+    marginRight: "8px",
+    padding: "8px",
+    borderRadius: "8px",
+    transition: "background-color 0.2s ease",
+    "&:hover": {
+      backgroundColor: "rgba(67, 97, 238, 0.1)",
+    },
+    "@media (max-width: 768px)": {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  },
+  logoutText: {
+    "@media (max-width: 480px)": {
+      display: "none",
+    },
+  },
+  overlay: {
+    position: "fixed",
+    top: "60px",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 40,
+    "@media (max-width: 480px)": {
+      top: "50px",
+    },
+  },
+}
+
+export default AdminDashboard
+
